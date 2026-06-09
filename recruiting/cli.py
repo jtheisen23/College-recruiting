@@ -67,6 +67,7 @@ def cmd_list(args: argparse.Namespace) -> int:
             position=normalize_position(args.position),
             state=args.state,
             committed=committed,
+            name=args.name,
             sort_by=args.sort,
             descending=not args.ascending,
             limit=args.limit,
@@ -152,6 +153,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--grad-year", type=int)
     sp.add_argument("--position")
     sp.add_argument("--state")
+    sp.add_argument("--name", help="search by athlete name (substring match)")
     sp.add_argument("--committed", choices=["yes", "no", "all"], default="all")
     sp.add_argument("--sort", default="rating", choices=sorted(q.SORTABLE))
     sp.add_argument("--ascending", action="store_true")

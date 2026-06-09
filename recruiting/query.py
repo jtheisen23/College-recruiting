@@ -13,14 +13,16 @@ def list_players(
     position: str | None = None,
     state: str | None = None,
     committed: bool | None = None,
+    name: str | None = None,
     sort_by: str = "rating",
     descending: bool = True,
     limit: int | None = None,
     with_offer_count: bool = True,
 ) -> list[sqlite3.Row]:
-    """Return players filtered by grad year / position / state, sorted as requested.
+    """Return players filtered by grad year / position / state / name, sorted.
 
     `committed`: True = only committed, False = only uncommitted, None = all.
+    `name`: case-insensitive substring match on the athlete's name.
     """
     if sort_by not in SORTABLE:
         raise ValueError(f"sort_by must be one of {sorted(SORTABLE)}")
@@ -40,6 +42,9 @@ def list_players(
         where.append("p.committed_to IS NOT NULL")
     elif committed is False:
         where.append("p.committed_to IS NULL")
+    if name:
+        where.append("p.full_name LIKE ?")
+        params.append(f"%{name}%")
 
     where_sql = f"WHERE {' AND '.join(where)}" if where else ""
     offer_col = (
