@@ -1,0 +1,75 @@
+name: Refresh recruiting data
+
+# Pulls fresh recruit data from the CFBD API on a schedule (and on demand),
+# regenerates site/data.json, commits it, and publishes the site to Pages.
+# Runs entirely on GitHub's runners — no local machine involved.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"      # every Monday 09:00 UTC
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Recruiting class years to pull (space-separated)"
+        required: false
+        default: "2026 2027 2028"
+
+permissions:
+  contents: write     # commit the refreshed data.json
+  pages: write        # publish to Pages
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Ingest from CFBD and export JSON
+        env:
+          CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
+        run: |
+          if [ -z "$CFBD_API_KEY" ]; then
+            echo "::error::CFBD_API_KEY secret is not set. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          YEARS="${{ github.event.inputs.years }}"
+          [ -z "$YEARS" ] && YEARS="2026 2027 2028"
+          echo "Pulling classes: $YEARS"
+          recruiting init
+          recruiting ingest --year $YEARS
+          recruiting export
+          recruiting stats
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/data.json
+          if git diff --staged --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "Automated recruiting data refresh"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

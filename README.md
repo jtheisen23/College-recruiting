@@ -90,6 +90,25 @@ https://jtheisen23.github.io/college-recruiting/
 The repo ships with clearly-labeled **sample data** so the page renders before
 your first real ingest; `recruiting export` overwrites it with live data.
 
+## Fully automated (no local machine needed)
+
+[`.github/workflows/refresh-data.yml`](.github/workflows/refresh-data.yml) runs
+the **entire loop on GitHub's runners** — pull from the CFBD API → regenerate
+`site/data.json` → commit → publish to Pages. It runs **weekly** (Mondays 09:00
+UTC) and can be triggered manually from the **Actions** tab (with a custom list
+of class years).
+
+**One-time setup:** add your CFBD key as a repo secret —
+**Settings → Secrets and variables → Actions → New repository secret**, name it
+`CFBD_API_KEY`. (The runner can reach the CFBD API, so nothing runs on your
+machine.) Free-tier usage is tiny: ~1 API call per class year per run.
+
+> **Note on offers:** the automated pull populates player **name, position,
+> grad year, high school, location, stars, ranking, and committed school** from
+> CFBD. The per-recruit **offer list** has no free/legal API (see
+> [`docs/RESEARCH.md`](docs/RESEARCH.md)), so it stays empty unless added by
+> another method. The committed-school column is filled automatically.
+
 ## Project layout
 
 ```
