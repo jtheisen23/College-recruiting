@@ -1,38 +1,89 @@
 # College Recruiting Database
 
-A project to build and maintain a database of high school football players, the
-college **offers** they've received, their **position**, and their **high school
-graduation year**.
+A database of high school football players, the college **offers** they've
+received, their **position**, and their **high school graduation year** — with
+fast **filtering/sorting by graduation year and position**.
 
-> **Status:** Pre-implementation. This repo currently contains a **data-source
-> research report** ([`docs/RESEARCH.md`](docs/RESEARCH.md)) and a recommended
-> architecture. No collection code has been written yet — see the report for the
-> recommended next steps and the key decision that needs to be made first.
+> See [`docs/RESEARCH.md`](docs/RESEARCH.md) for the data-source research that
+> shaped this design.
 
-## TL;DR of the research
+## How it's built (the two data classes)
 
-Your goal splits into two very different problems:
-
-| Data you want | Free & legal source? | Difficulty |
+| Data | Source | Status |
 |---|---|---|
-| Player name, **position**, **grad/recruiting year**, HS, hometown, stars, committed school | ✅ Yes — **CollegeFootballData (CFBD) API**, free | Easy |
-| The **list of college offers** each recruit received | ❌ No free API — lives only on proprietary profiles (247Sports/On3/Rivals) or X posts | Hard |
+| Player name, **position**, **grad year**, HS, location, stars, rating, committed school | **CollegeFootballData (CFBD) API** — free | ✅ Phase 1 (built) |
+| The **list of college offers** per recruit | Manual / admin entry | ✅ Phase 2 path (built); see research for why no free feed exists |
 
-The "offers" piece — the heart of your idea — is the hard part and is **not**
-available from any free, scrape-friendly source. See
-[`docs/RESEARCH.md`](docs/RESEARCH.md) for the full breakdown and options.
+We're following the **"A then B"** plan: ingest the player/position/grad-year
+backbone from the free, legal CFBD API now, and enter offers manually for the
+recruits you care about.
 
-**Sorting/filtering by graduation year and position** is a core requirement and
-is built into the schema as indexed, first-class columns — see the
-[Filtering & sorting](docs/RESEARCH.md#filtering--sorting-core-requirement)
-section.
+## Setup
 
-## Recommended stack (free)
+```bash
+pip install -e .            # or: pip install httpx pydantic
+cp .env.example .env        # then add your free CFBD key
+```
 
-- **Python 3.11+** — best ecosystem for data collection
-- **SQLite** to start (zero-setup, a single file), with a clean path to
-  **Postgres** later
-- **httpx** + **pydantic** for API access and validation
-- **uv** for dependency management
+Get a free CFBD API key at https://collegefootballdata.com/key (free tier =
+1,000 calls/month), then:
 
-See the research report for the proposed schema and a phased plan.
+```bash
+export CFBD_API_KEY=your_key_here
+```
+
+## Usage
+
+```bash
+# 1. Create the database
+recruiting init
+
+# 2. Ingest one or more recruiting classes from CFBD (needs CFBD_API_KEY)
+recruiting ingest --year 2026 2027
+recruiting ingest --year 2027 --state TX        # optional filters
+
+# 3. Filter & sort — the core feature
+recruiting list --grad-year 2027 --position WR --sort rating --limit 25
+recruiting list --grad-year 2026 --position QB --committed no
+recruiting list --grad-year 2027 --sort ranking --ascending
+
+# 4. Offers (manual entry)
+recruiting add-player --name "Jadyn Carter" --position EDGE --grad-year 2027 --state TX
+recruiting offer --player-id 1 --college "Alabama" --date 2026-03-01
+recruiting offer --player-id 1 --college "Georgia"
+recruiting offers --player-id 1
+
+# 5. Stats
+recruiting stats        # player counts by grad year and position
+```
+
+(If not installed as a script, use `python3 -m recruiting.cli <command>`.)
+
+## Project layout
+
+```
+recruiting/
+  schema.sql        SQLite schema (players / colleges / offers / commitments)
+  models.py         Pydantic models + position normalization (WDE→EDGE, etc.)
+  db.py             connection, schema init, upserts (idempotent)
+  cfbd_client.py    CollegeFootballData v2 recruiting API client (rate-limit aware)
+  ingest.py         ingestion pipeline
+  query.py          filter/sort by grad year & position; offer counts
+  cli.py            command-line interface
+tests/              pytest suite (no network required)
+docs/RESEARCH.md    data-source research & architecture
+```
+
+## Stack
+
+Python 3.11+, `httpx`, `pydantic`, SQLite (single-file; portable to Postgres).
+All free. Run `pytest` for the test suite.
+
+## Notes & limits
+
+- **Filtering/sorting by grad year and position** is indexed and first-class.
+- Positions are normalized to a consistent set so filters are reliable.
+- CFBD free tier is 1,000 calls/month; a full class is ~1 call. ~$10/mo lifts
+  this to 75,000 if you backfill many years.
+- The **offers** list is the one thing with no free feed — see the research doc
+  for the legal/cost tradeoffs of automating it (paid X API, etc.).

@@ -1,0 +1,17 @@
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+dist/
+build/
