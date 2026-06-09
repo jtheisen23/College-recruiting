@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HS Football Recruiting Database</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2029; --line: #2a323d; --text: #e6e9ed;
+    --muted: #8a94a0; --accent: #4f9cf9; --chip: #243; --star: #ffc83d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+  }
+  header { padding: 20px 24px 8px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .banner {
+    margin: 12px 24px; padding: 10px 14px; border-radius: 8px;
+    background: #3a2f12; color: #ffd479; border: 1px solid #5a4a1c; font-size: 13px;
+  }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: end;
+    padding: 12px 24px; position: sticky; top: 0; background: var(--bg);
+    border-bottom: 1px solid var(--line); z-index: 5;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 9px; font-size: 13px; min-width: 120px;
+  }
+  input[type="search"] { min-width: 200px; }
+  .count { margin-left: auto; color: var(--muted); align-self: center; }
+  button.reset {
+    background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 12px; cursor: pointer;
+  }
+  .table-wrap { padding: 0 12px 40px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; }
+  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-size: 12px; cursor: pointer; user-select: none; position: sticky; }
+  th:hover { color: var(--text); }
+  th .arrow { color: var(--accent); }
+  tr.player:hover { background: var(--panel); }
+  tr.player { cursor: pointer; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pos {
+    display: inline-block; padding: 2px 7px; border-radius: 10px;
+    background: #1d2b3a; color: var(--accent); font-size: 12px; font-weight: 600;
+  }
+  .stars { color: var(--star); letter-spacing: 1px; }
+  .offers-badge {
+    display: inline-block; min-width: 22px; text-align: center; padding: 1px 7px;
+    border-radius: 10px; background: #16301d; color: #6ddf8f; font-weight: 600;
+  }
+  .offers-row td { background: #11161d; color: var(--muted); white-space: normal; }
+  .offers-row .chip {
+    display: inline-block; margin: 2px; padding: 2px 8px; border-radius: 12px;
+    background: #1d2b3a; color: var(--text); font-size: 12px;
+  }
+  .committed { color: #6ddf8f; }
+  .empty { padding: 60px 24px; text-align: center; color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏈 HS Football Recruiting Database</h1>
+  <div class="meta" id="meta">Loading…</div>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<div class="controls">
+  <div class="field">
+    <label for="year">Grad year</label>
+    <select id="year"><option value="">All</option></select>
+  </div>
+  <div class="field">
+    <label for="pos">Position</label>
+    <select id="pos"><option value="">All</option></select>
+  </div>
+  <div class="field">
+    <label for="state">State</label>
+    <select id="state"><option value="">All</option></select>
+  </div>
+  <div class="field">
+    <label for="committed">Status</label>
+    <select id="committed">
+      <option value="">All</option>
+      <option value="yes">Committed</option>
+      <option value="no">Uncommitted</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="q">Search name / school</label>
+    <input id="q" type="search" placeholder="Type a name…" />
+  </div>
+  <button class="reset" id="reset">Reset</button>
+  <div class="count" id="count"></div>
+</div>
+
+<div class="table-wrap">
+  <table id="tbl">
+    <thead>
+      <tr id="head"></tr>
+    </thead>
+    <tbody id="body"></tbody>
+  </table>
+  <div id="empty" class="empty" hidden></div>
+</div>
+
+<script>
+const COLS = [
+  { key: "ranking",      label: "#",        num: true },
+  { key: "name",         label: "Name" },
+  { key: "position",     label: "Pos" },
+  { key: "grad_year",    label: "Year",     num: true },
+  { key: "high_school",  label: "High School" },
+  { key: "state",        label: "St" },
+  { key: "stars",        label: "Stars",    num: true },
+  { key: "rating",       label: "Rating",   num: true },
+  { key: "offer_count",  label: "Offers",   num: true },
+  { key: "committed_to", label: "Committed" },
+];
+
+let ALL = [];
+let sortKey = "rating";
+let sortDir = -1; // -1 desc, 1 asc
+const expanded = new Set();
+
+const $ = id => document.getElementById(id);
+
+function uniqueSorted(vals, numeric) {
+  const s = [...new Set(vals.filter(v => v !== null && v !== undefined && v !== ""))];
+  s.sort(numeric ? (a, b) => b - a : (a, b) => String(a).localeCompare(String(b)));
+  return s;
+}
+
+function fillSelect(el, vals) {
+  for (const v of vals) {
+    const o = document.createElement("option");
+    o.value = v; o.textContent = v; el.appendChild(o);
+  }
+}
+
+function starStr(n) { return n ? "★".repeat(n) : ""; }
+
+function applyFilters() {
+  const year = $("year").value, pos = $("pos").value, state = $("state").value;
+  const committed = $("committed").value, q = $("q").value.trim().toLowerCase();
+  let rows = ALL.filter(p => {
+    if (year && String(p.grad_year) !== year) return false;
+    if (pos && p.position !== pos) return false;
+    if (state && p.state !== state) return false;
+    if (committed === "yes" && !p.committed_to) return false;
+    if (committed === "no" && p.committed_to) return false;
+    if (q) {
+      const hay = `${p.name || ""} ${p.high_school || ""} ${p.city || ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  rows.sort((a, b) => {
+    let x = a[sortKey], y = b[sortKey];
+    if (x === null || x === undefined) return 1;   // nulls last
+    if (y === null || y === undefined) return -1;
+    if (typeof x === "string") return x.localeCompare(y) * sortDir;
+    return (x - y) * sortDir;
+  });
+  render(rows);
+}
+
+function render(rows) {
+  $("count").textContent = `${rows.length} player${rows.length === 1 ? "" : "s"}`;
+  const body = $("body");
+  body.innerHTML = "";
+  $("empty").hidden = rows.length > 0;
+  if (!rows.length) {
+    $("empty").textContent = ALL.length ? "No players match these filters." :
+      "No data yet. Run `recruiting ingest` then `recruiting export`, and push.";
+  }
+  for (const p of rows) {
+    const tr = document.createElement("tr");
+    tr.className = "player";
+    tr.onclick = () => { expanded.has(p.id) ? expanded.delete(p.id) : expanded.add(p.id); applyFilters(); };
+    tr.innerHTML = `
+      <td class="num">${p.ranking ?? ""}</td>
+      <td>${esc(p.name)}</td>
+      <td>${p.position ? `<span class="pos">${esc(p.position)}</span>` : ""}</td>
+      <td class="num">${p.grad_year ?? ""}</td>
+      <td>${esc(p.high_school) || ""}${p.city ? ` <span style="color:var(--muted)">(${esc(p.city)})</span>` : ""}</td>
+      <td>${esc(p.state) || ""}</td>
+      <td><span class="stars">${starStr(p.stars)}</span></td>
+      <td class="num">${p.rating != null ? p.rating.toFixed(3) : ""}</td>
+      <td class="num"><span class="offers-badge">${p.offer_count}</span></td>
+      <td class="${p.committed_to ? "committed" : ""}">${esc(p.committed_to) || "—"}</td>`;
+    body.appendChild(tr);
+    if (expanded.has(p.id)) {
+      const er = document.createElement("tr");
+      er.className = "offers-row";
+      const chips = p.offers.length
+        ? p.offers.map(o => `<span class="chip">${esc(o)}</span>`).join("")
+        : "<em>No offers recorded yet.</em>";
+      er.innerHTML = `<td colspan="${COLS.length}"><strong>Offers (${p.offer_count}):</strong> ${chips}</td>`;
+      body.appendChild(er);
+    }
+  }
+}
+
+function esc(s) {
+  return s == null ? "" : String(s).replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function buildHead() {
+  const head = $("head");
+  for (const c of COLS) {
+    const th = document.createElement("th");
+    th.dataset.key = c.key;
+    th.onclick = () => {
+      if (sortKey === c.key) sortDir *= -1;
+      else { sortKey = c.key; sortDir = c.num ? -1 : 1; }
+      buildHead(); applyFilters();
+    };
+    const arrow = sortKey === c.key ? `<span class="arrow">${sortDir < 0 ? "▼" : "▲"}</span>` : "";
+    th.innerHTML = `${c.label} ${arrow}`;
+    head.appendChild(th);
+  }
+}
+buildHead = (function (orig) { // rebuild in place
+  return function () { $("head").innerHTML = ""; orig(); };
+})(buildHead);
+
+["year", "pos", "state", "committed", "q"].forEach(id =>
+  $(id).addEventListener("input", applyFilters));
+$("reset").onclick = () => {
+  ["year", "pos", "state", "committed", "q"].forEach(id => $(id).value = "");
+  applyFilters();
+};
+
+fetch("data.json")
+  .then(r => r.json())
+  .then(data => {
+    ALL = data.players || [];
+    $("meta").textContent =
+      `${data.player_count ?? ALL.length} players · updated ${data.generated_at || "?"}`;
+    if (data.sample) {
+      const b = $("banner");
+      b.hidden = false;
+      b.innerHTML = "⚠️ Showing <strong>sample data</strong>. Replace it by running " +
+        "<code>recruiting ingest</code> → <code>recruiting export</code> and pushing.";
+    }
+    fillSelect($("year"), uniqueSorted(ALL.map(p => p.grad_year), true));
+    fillSelect($("pos"), uniqueSorted(ALL.map(p => p.position), false));
+    fillSelect($("state"), uniqueSorted(ALL.map(p => p.state), false));
+    applyFilters();
+  })
+  .catch(err => {
+    $("meta").textContent = "Could not load data.json.";
+    $("empty").hidden = false;
+    $("empty").textContent = "data.json not found. Run `recruiting export` and push.";
+  });
+</script>
+</body>
+</html>

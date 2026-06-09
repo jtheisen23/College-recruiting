@@ -1,0 +1,13 @@
+{
+ "generated_at": "sample data — not yet ingested",
+ "player_count": 6,
+ "sample": true,
+ "players": [
+  {"id": 1, "name": "Example Player A", "position": "QB", "grad_year": 2027, "high_school": "North HS", "city": "Dallas", "state": "TX", "height_in": 75, "weight_lb": 200, "stars": 5, "rating": 0.991, "ranking": 1, "committed_to": null, "offer_count": 3, "offers": ["Alabama", "Georgia", "Texas"]},
+  {"id": 2, "name": "Example Player B", "position": "WR", "grad_year": 2027, "high_school": "South HS", "city": "Miami", "state": "FL", "height_in": 73, "weight_lb": 185, "stars": 4, "rating": 0.954, "ranking": 12, "committed_to": "Ohio State", "offer_count": 2, "offers": ["Ohio State", "Miami"]},
+  {"id": 3, "name": "Example Player C", "position": "EDGE", "grad_year": 2027, "high_school": "Central HS", "city": "Atlanta", "state": "GA", "height_in": 77, "weight_lb": 245, "stars": 4, "rating": 0.948, "ranking": 18, "committed_to": null, "offer_count": 1, "offers": ["Georgia"]},
+  {"id": 4, "name": "Example Player D", "position": "OL", "grad_year": 2026, "high_school": "East HS", "city": "Columbus", "state": "OH", "height_in": 78, "weight_lb": 305, "stars": 4, "rating": 0.932, "ranking": 25, "committed_to": "Michigan", "offer_count": 0, "offers": []},
+  {"id": 5, "name": "Example Player E", "position": "DB", "grad_year": 2026, "high_school": "West HS", "city": "Los Angeles", "state": "CA", "height_in": 72, "weight_lb": 180, "stars": 3, "rating": 0.889, "ranking": 140, "committed_to": null, "offer_count": 2, "offers": ["USC", "Oregon"]},
+  {"id": 6, "name": "Example Player F", "position": "RB", "grad_year": 2028, "high_school": "Lincoln HS", "city": "Phoenix", "state": "AZ", "height_in": 70, "weight_lb": 195, "stars": 4, "rating": 0.921, "ranking": 33, "committed_to": null, "offer_count": 1, "offers": ["Arizona State"]}
+ ]
+}

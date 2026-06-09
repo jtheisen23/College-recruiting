@@ -55,9 +55,40 @@ recruiting offers --player-id 1
 
 # 5. Stats
 recruiting stats        # player counts by grad year and position
+
+# 6. Export for the public web viewer
+recruiting export       # writes site/data.json
 ```
 
 (If not installed as a script, use `python3 -m recruiting.cli <command>`.)
+
+## Public web viewer (GitHub Pages)
+
+A static, read-only viewer lives in [`site/`](site/) and is published to GitHub
+Pages — no server or database hosting required. It loads `site/data.json` and
+gives viewers **grad-year and position filters**, a state filter, committed/
+uncommitted toggle, name/school search, sortable columns, and click-to-expand
+offer lists.
+
+**Publish/update flow:**
+
+```bash
+recruiting ingest --year 2026 2027   # pull latest data (needs CFBD_API_KEY)
+recruiting export                    # regenerate site/data.json
+git add site/data.json && git commit -m "Update recruiting data" && git push
+```
+
+Deployment is automated by [`.github/workflows/pages.yml`](.github/workflows/pages.yml),
+which publishes `site/` to Pages on every push to **`main`** (Pages source must be
+set to *GitHub Actions* in repo settings). Once the feature branch is merged to
+`main`, the site goes live at:
+
+```
+https://jtheisen23.github.io/college-recruiting/
+```
+
+The repo ships with clearly-labeled **sample data** so the page renders before
+your first real ingest; `recruiting export` overwrites it with live data.
 
 ## Project layout
 

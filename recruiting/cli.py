@@ -115,6 +115,15 @@ def cmd_offers_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_export(args: argparse.Namespace) -> int:
+    from .export import export_json
+
+    with dbm.connect(args.db) as conn:
+        n = export_json(conn, args.out)
+    print(f"Exported {n} players to {args.out}")
+    return 0
+
+
 def cmd_stats(args: argparse.Namespace) -> int:
     with dbm.connect(args.db) as conn:
         rows = q.counts_by_year_position(conn)
@@ -169,6 +178,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("offers", help="show offers for a player")
     sp.add_argument("--player-id", type=int, required=True)
     sp.set_defaults(func=cmd_offers_show)
+
+    sp = sub.add_parser("export", help="export the DB to JSON for the web viewer")
+    sp.add_argument("--out", default="site/data.json", help="output JSON path")
+    sp.set_defaults(func=cmd_export)
 
     sp = sub.add_parser("stats", help="counts by grad year and position")
     sp.set_defaults(func=cmd_stats)
