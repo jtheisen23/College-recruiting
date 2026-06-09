@@ -67,6 +67,21 @@ def test_filter_and_sort(conn):
     assert [r["full_name"] for r in rows] == ["WR2", "WR1"]
 
 
+def test_search_by_name(conn):
+    dbm.upsert_recruit(conn, RecruitIn(source="cfbd", id="1", name="Caleb Williams", year=2027, position="QB"))
+    dbm.upsert_recruit(conn, RecruitIn(source="cfbd", id="2", name="Marvin Harrison", year=2027, position="WR"))
+    dbm.upsert_recruit(conn, RecruitIn(source="cfbd", id="3", name="Will Anderson", year=2027, position="EDGE"))
+    conn.commit()
+
+    # Case-insensitive substring match on the athlete's name ("will" matches
+    # both "Caleb Williams" and "Will Anderson").
+    assert {r["full_name"] for r in q.list_players(conn, name="will")} \
+        == {"Caleb Williams", "Will Anderson"}
+    assert {r["full_name"] for r in q.list_players(conn, name="harrison")} == {"Marvin Harrison"}
+    # Combines with other filters.
+    assert {r["full_name"] for r in q.list_players(conn, name="will", position="QB")} == {"Caleb Williams"}
+
+
 def test_offers(conn):
     pid = dbm.upsert_recruit(conn, RecruitIn(source="manual", id="x", name="Star Rec", year=2027, position="ATH"))
     dbm.add_offer(conn, pid, "Alabama", offer_date="2026-01-01")
