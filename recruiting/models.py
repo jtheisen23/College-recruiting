@@ -59,8 +59,8 @@ class RecruitIn(BaseModel):
     high_school: str | None = Field(default=None, alias="school")
     city: str | None = None
     state: str | None = Field(default=None, alias="stateProvince")
-    height_in: int | None = Field(default=None, alias="height")
-    weight_lb: int | None = Field(default=None, alias="weight")
+    height_in: float | None = Field(default=None, alias="height")
+    weight_lb: float | None = Field(default=None, alias="weight")
     stars: int | None = None
     rating: float | None = None
     ranking: int | None = None
@@ -72,4 +72,10 @@ class RecruitIn(BaseModel):
         self.position = normalize_position(self.position)
         if self.source_id is not None:
             self.source_id = str(self.source_id)
+        # CFBD returns height/weight as floats (e.g. 75.5"); the DB columns are
+        # integers, so round to the nearest whole unit.
+        if self.height_in is not None:
+            self.height_in = round(self.height_in)
+        if self.weight_lb is not None:
+            self.weight_lb = round(self.weight_lb)
         return self

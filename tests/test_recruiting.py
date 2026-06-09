@@ -45,6 +45,15 @@ def test_recruit_accepts_cfbd_camelcase():
     assert r.source_id == "12345"
 
 
+def test_float_height_weight_rounded():
+    # CFBD returns height/weight as floats; they must coerce to rounded ints.
+    r = RecruitIn.model_validate(
+        {"id": 9, "name": "Tall Guy", "height": 75.5, "weight": 220.4}
+    ).normalized()
+    assert r.height_in == 76
+    assert r.weight_lb == 220
+
+
 def test_upsert_is_idempotent(conn):
     r = RecruitIn(source="cfbd", id="1", name="A B", year=2026, position="QB")
     pid1 = dbm.upsert_recruit(conn, r)
